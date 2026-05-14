@@ -1,26 +1,64 @@
 {
-  "name": "dokandar-tmp",
+  "name": "dokandar-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "node scripts/dev.mjs",
+    "build": "cross-env NODE_OPTIONS=--use-system-ca next build",
+    "start": "cross-env NODE_OPTIONS=--use-system-ca next start -H 127.0.0.1",
+    "lint": "next lint",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\" \"*.{js,mjs,ts,md}\" \"docs/**/*.html\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,md}\" \"*.{js,mjs,ts,md}\" \"docs/**/*.html\"",
+    "db:generate": "cross-env NODE_OPTIONS=--use-system-ca prisma generate",
+    "db:migrate": "cross-env NODE_OPTIONS=--use-system-ca prisma migrate dev",
+    "db:migrate:deploy": "cross-env NODE_OPTIONS=--use-system-ca prisma migrate deploy",
+    "db:push": "cross-env NODE_OPTIONS=--use-system-ca prisma db push",
+    "db:studio": "cross-env NODE_OPTIONS=--use-system-ca prisma studio",
+    "db:seed": "cross-env NODE_OPTIONS=--use-system-ca prisma db seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
+    "@prisma/client": "^6.8.2",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@tanstack/react-query": "^5.76.1",
+    "axios": "^1.9.0",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "decimal.js": "^10.5.0",
+    "framer-motion": "^11.18.2",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.511.0",
+    "next": "14.2.35",
+    "next-auth": "^4.24.11",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.35"
+    "react-hook-form": "^7.56.4",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.25.28"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tanstack/react-query-devtools": "^5.76.1",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "cross-env": "^10.1.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35"
+    "eslint-config-next": "14.2.35",
+    "eslint-config-prettier": "^10.1.8",
+    "get-port": "^7.2.0",
+    "next-pwa": "^5.6.0",
+    "postcss": "^8",
+    "prettier": "^3.8.3",
+    "prisma": "^6.8.2",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }

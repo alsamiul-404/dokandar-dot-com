@@ -1,0 +1,177 @@
+// -----------------------------------------------------------------------------
+// Dokandar.app — ERD-aligned data layer (shops, customers, products, sales,
+// credit_entries, stock_logs). Business rules in services / API routes.
+// -----------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model Shop {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  phone     String?
+  ownerName String?
+  plan      String   @default("basic")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  customers     Customer[]
+  products      Product[]
+  sales         Sale[]
+  creditEntries CreditEntry[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  /// Normalized Bangladesh MSISDN, e.g. 8801712345678
+  phone        String   @unique
+  email        String?
+  /// Unused for OTP login; random hash at signup for future password flows.
+  passwordHash String
+  name         String
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([shopId])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  shopId    String
+  name      String
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  sales         Sale[]
+  creditEntries CreditEntry[]
+
+  @@index([shopId])
+  @@index([shopId, phone])
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  shopId          String
+  name            String
+  sku             String?
+  category        String   @default("")
+  buyPrice        Decimal  @default("0") @db.Decimal(14, 4)
+  unitPrice       Decimal  @db.Decimal(14, 4)
+  stockOnHand     Int      @default(0)
+  lowStockAlert   Int      @default(5)
+  unit            String   @default("pcs")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop      Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  stockLogs StockLog[]
+  saleLines SaleLine[]
+
+  @@index([shopId])
+  @@index([shopId, sku])
+}
+
+model Sale {
+  id            String   @id @default(uuid())
+  shopId        String
+  customerId    String?
+  totalAmount   Decimal  @db.Decimal(14, 4)
+  cashPaid      Decimal  @default("0") @db.Decimal(14, 4)
+  creditAmount  Decimal  @default("0") @db.Decimal(14, 4)
+  notes         String?
+  soldAt        DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer      Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  stockLogs     StockLog[]
+  creditEntries CreditEntry[]
+  lines         SaleLine[]
+
+  @@index([shopId])
+  @@index([shopId, soldAt])
+  @@index([customerId])
+}
+
+model SaleLine {
+  id         String  @id @default(uuid())
+  saleId     String
+  productId  String
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(14, 4)
+  lineTotal  Decimal @db.Decimal(14, 4)
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model CreditEntry {
+  id          String          @id @default(uuid())
+  shopId      String
+  customerId  String
+  saleId      String?
+  amount      Decimal         @db.Decimal(14, 4)
+  entryType   CreditEntryType @default(ADJUSTMENT)
+  description String?
+  recordedAt  DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+
+  shop     Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sale     Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([shopId])
+  @@index([customerId])
+  @@index([shopId, customerId, recordedAt])
+}
+
+model StockLog {
+  id            String         @id @default(uuid())
+  productId     String
+  saleId        String?
+  quantityDelta Int
+  reason        StockLogReason
+  note          String?
+  createdAt     DateTime       @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sale    Sale?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([saleId])
+  @@index([productId, createdAt])
+}
+
+enum CreditEntryType {
+  SALE_CREDIT
+  PAYMENT
+  ADJUSTMENT
+}
+
+enum StockLogReason {
+  SALE
+  PURCHASE
+  ADJUSTMENT
+  RETURN
+  OPENING
+}

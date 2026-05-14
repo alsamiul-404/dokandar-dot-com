@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 512 512" role="img" aria-label="Dokandar">
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <path fill="#34d399" d="M128 352V192h64v128h192v64H128zm64-224h256v64H192V128z"/>
+  <path fill="#f8fafc" d="M160 416h256v32H160v-32zm32-288h32v160h-32V128zm96 0h32v160h-32V128zm96 0h32v160h-32V128z"/>
+</svg>
