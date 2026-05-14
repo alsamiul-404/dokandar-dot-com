@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
+import { motion } from "framer-motion";
 import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,13 @@ type Props = {
 
 export function DashboardChrome({ shopName, children }: Props) {
   return (
-    <div className="flex min-h-dvh flex-col bg-muted/50">
-      <header className="sticky top-0 z-20 border-b-2 border-border bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/90">
+    <div className="bg-app-mesh flex min-h-dvh flex-col">
+      <motion.header
+        initial={{ y: -14, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        className="glass-panel sticky top-0 z-20 border-b border-border/80 pt-[env(safe-area-inset-top)] shadow-sm"
+      >
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 sm:max-w-2xl">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-muted-foreground">দোকান</p>
@@ -38,8 +44,8 @@ export function DashboardChrome({ shopName, children }: Props) {
             </Button>
           </div>
         </div>
-      </header>
-      <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-4 sm:max-w-2xl">
+      </motion.header>
+      <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5 sm:max-w-2xl">
         {children}
       </div>
     </div>

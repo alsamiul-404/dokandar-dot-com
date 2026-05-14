@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion } from "framer-motion";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InlineLoadingLabel } from "@/components/shared/loading-status";
 import { cn } from "@/lib/utils";
 import {
   otpLoginSchema,
@@ -25,13 +27,25 @@ type Step = "collect" | "otp";
 
 type LoginMethod = "otp" | "password";
 
-export function AuthForms() {
+export function AuthForms({ nextAuthError }: { nextAuthError?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [step, setStep] = useState<Step>("collect");
   const [loginMethod, setLoginMethod] = useState<LoginMethod>("otp");
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (!nextAuthError) return;
+    const messages: Record<string, string> = {
+      Configuration:
+        "সেশন/কুকি সেটআপ সমস্যা। ব্রাউজারে যে ঠিকানা খুলেছেন (যেমন 127.0.0.1 বা localhost) আর .env এর NEXTAUTH_URL একই হোস্ট ও পোর্ট হতে হবে। ডেভে npm run dev ব্যবহার করলে স্বয়ংক্রিয় মিলবে।",
+      CredentialsSignin: "মোবাইল বা পাসওয়ার্ড / OTP সঠিক নয়।",
+      AccessDenied: "লগইন প্রত্যাখ্যান হয়েছে।",
+      Verification: "ভেরিফিকেশন ব্যর্থ।",
+    };
+    setFormError(messages[nextAuthError] ?? `লগইন সমস্যা (${nextAuthError})। আবার চেষ্টা করুন।`);
+  }, [nextAuthError]);
 
   const loginForm = useForm<OtpLoginInput>({
     resolver: zodResolver(otpLoginSchema),
@@ -180,49 +194,74 @@ export function AuthForms() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-6 sm:px-0">
-      <div className="space-y-2 text-center">
-        <p className="text-sm font-medium text-muted-foreground">Dokandar.app</p>
-        <h1 className="text-balance text-3xl font-bold tracking-tight">দোকানদার লগইন</h1>
-        <p className="text-pretty text-base text-muted-foreground">
-          মোবাইল নম্বর ও OTP — দ্রুত ও নিরাপদ।
-        </p>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 22 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", damping: 26, stiffness: 280 }}
+      className="mx-auto flex w-full max-w-md flex-col gap-6 px-0 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-6 sm:max-w-lg"
+    >
+      <div className="glass-panel flex flex-col gap-6 rounded-[1.75rem] p-6 sm:p-8">
+        <div className="space-y-2 text-center">
+          <motion.p
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="text-sm font-semibold uppercase tracking-wider text-primary"
+          >
+            Dokandar.app
+          </motion.p>
+          <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">দোকানদার লগইন</h1>
+          <p className="text-pretty text-base text-muted-foreground">
+            মোবাইল ও OTP — দ্রুত ও নিরাপদ। চাইলে পাসওয়ার্ড দিয়েও লগইন।
+          </p>
+        </div>
 
-      <div
-        className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/60 p-1.5"
-        role="tablist"
-        aria-label="লগইন বা সাইন আপ"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "login"}
-          className={cn(
-            "min-h-[3rem] rounded-xl text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            mode === "login"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => resetFlow("login")}
-        >
-          লগ ইন
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "signup"}
-          className={cn(
-            "min-h-[3rem] rounded-xl text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            mode === "signup"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => resetFlow("signup")}
-        >
-          নতুন অ্যাকাউন্ট
-        </button>
-      </div>
+        <div className="mt-6 grid grid-cols-2 gap-1.5 rounded-2xl bg-muted/70 p-1.5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]" role="tablist" aria-label="লগইন বা সাইন আপ">
+          <motion.button
+            type="button"
+            role="tab"
+            aria-selected={mode === "login"}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+              "relative min-h-[3rem] rounded-xl text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              mode === "login"
+                ? "bg-background text-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => resetFlow("login")}
+          >
+            {mode === "login" ? (
+              <motion.span
+                layoutId="authTab"
+                className="absolute inset-0 -z-10 rounded-xl bg-background shadow-sm"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            ) : null}
+            <span className="relative z-10">লগ ইন</span>
+          </motion.button>
+          <motion.button
+            type="button"
+            role="tab"
+            aria-selected={mode === "signup"}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+              "relative min-h-[3rem] rounded-xl text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              mode === "signup"
+                ? "bg-background text-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => resetFlow("signup")}
+          >
+            {mode === "signup" ? (
+              <motion.span
+                layoutId="authTab"
+                className="absolute inset-0 -z-10 rounded-xl bg-background shadow-sm"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            ) : null}
+            <span className="relative z-10">নতুন অ্যাকাউন্ট</span>
+          </motion.button>
+        </div>
 
       {process.env.NODE_ENV !== "production" ? (
         <p className="rounded-xl border border-dashed bg-muted/40 px-3 py-2 text-center text-sm text-muted-foreground">
@@ -231,14 +270,21 @@ export function AuthForms() {
         </p>
       ) : null}
 
-      {formError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-center text-base text-destructive"
-        >
-          {formError}
-        </div>
-      ) : null}
+      <AnimatePresence mode="wait">
+        {formError ? (
+          <motion.div
+            key={formError}
+            role="alert"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-center text-base text-destructive"
+          >
+            {formError}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {mode === "login" ? (
         loginMethod === "password" ? (
@@ -287,7 +333,11 @@ export function AuthForms() {
               className="mt-2 h-14 w-full rounded-2xl text-lg font-semibold"
               disabled={pending}
             >
-              {pending ? "অপেক্ষা করুন…" : "লগ ইন করুন"}
+              <InlineLoadingLabel
+                loading={pending}
+                idle="লগ ইন করুন"
+                loadingLabel="অপেক্ষা করুন…"
+              />
             </Button>
             <Button
               type="button"
@@ -354,7 +404,11 @@ export function AuthForms() {
                   className="mt-2 h-14 w-full rounded-2xl text-lg font-semibold"
                   disabled={pending}
                 >
-                  {pending ? "অপেক্ষা করুন…" : "লগ ইন করুন"}
+                  <InlineLoadingLabel
+                    loading={pending}
+                    idle="লগ ইন করুন"
+                    loadingLabel="অপেক্ষা করুন…"
+                  />
                 </Button>
                 <Button
                   type="button"
@@ -377,7 +431,11 @@ export function AuthForms() {
                   disabled={pending || !phoneWatchLogin?.trim()}
                   onClick={() => void requestOtp("login")}
                 >
-                  {pending ? "অপেক্ষা করুন…" : "OTP পাঠান"}
+                  <InlineLoadingLabel
+                    loading={pending}
+                    idle="OTP পাঠান"
+                    loadingLabel="পাঠানো হচ্ছে…"
+                  />
                 </Button>
                 <button
                   type="button"
@@ -481,7 +539,11 @@ export function AuthForms() {
                 className="mt-2 h-14 w-full rounded-2xl text-lg font-semibold"
                 disabled={pending}
               >
-                {pending ? "অপেক্ষা করুন…" : "অ্যাকাউন্ট খুলুন"}
+                <InlineLoadingLabel
+                  loading={pending}
+                  idle="অ্যাকাউন্ট খুলুন"
+                  loadingLabel="অপেক্ষা করুন…"
+                />
               </Button>
               <Button
                 type="button"
@@ -503,7 +565,11 @@ export function AuthForms() {
               disabled={pending || !phoneWatchSignup?.trim()}
               onClick={() => void requestOtp("signup")}
             >
-              {pending ? "অপেক্ষা করুন…" : "OTP পাঠান"}
+              <InlineLoadingLabel
+                loading={pending}
+                idle="OTP পাঠান"
+                loadingLabel="পাঠানো হচ্ছে…"
+              />
             </Button>
           )}
         </form>
@@ -512,6 +578,7 @@ export function AuthForms() {
       <Button asChild variant="ghost" className="h-12 text-base">
         <Link href="/">← হোমে ফিরে যান</Link>
       </Button>
-    </div>
+      </div>
+    </motion.div>
   );
 }

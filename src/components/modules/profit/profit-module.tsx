@@ -15,8 +15,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ProfitDatePicker } from "@/components/modules/profit/profit-date-picker";
+import { ProfitModuleSkeleton } from "@/components/shared/module-loading-skeleton";
+import { DataRefreshOverlay } from "@/components/shared/loading-status";
+import { cn } from "@/lib/utils";
 
 function todayIso(): string {
   const d = new Date();
@@ -29,7 +31,7 @@ function todayIso(): string {
 export function ProfitModule() {
   const { status } = useSession();
   const [date, setDate] = useState(todayIso);
-  const { data, isPending, isError } = useProfitReport(date);
+  const { data, isPending, isError, isFetching } = useProfitReport(date);
 
   const bnDate = useMemo(
     () =>
@@ -45,7 +47,7 @@ export function ProfitModule() {
   );
 
   if (status === "loading" || (isPending && !data)) {
-    return <p className="p-6 text-lg text-muted-foreground">লোড হচ্ছে…</p>;
+    return <ProfitModuleSkeleton />;
   }
 
   return (
@@ -63,33 +65,31 @@ export function ProfitModule() {
         </p>
       </div>
 
-      <Card className="border-2 border-foreground/15 shadow-md">
-        <CardHeader>
+      <Card className="overflow-hidden border border-border/70 shadow-lg ring-1 ring-black/[0.03] dark:ring-white/[0.05]">
+        <CardHeader className="border-b border-border/50 bg-muted/25 pb-4 backdrop-blur-sm">
           <CardTitle className="text-xl">তারিখ বাছাই</CardTitle>
           <CardDescription className="text-base">
             নির্দিষ্ট দিনের আনুমানিক মোট লাভ (বর্তমান ক্রয় দর ব্যবহার)
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="profit-date" className="text-base">
-              তারিখ
-            </Label>
-            <Input
-              id="profit-date"
-              type="date"
-              className="max-w-xs"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
+        <CardContent className="space-y-2 pt-6">
+          <ProfitDatePicker value={date} onChange={setDate} isRefreshing={isFetching} />
         </CardContent>
       </Card>
 
       {isError || !data ? (
         <p className="text-lg text-destructive">ডাটা আনা যায়নি</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="relative isolate">
+          {isFetching ? (
+            <DataRefreshOverlay label="লাভ হিসাব আপডেট হচ্ছে…" className="rounded-2xl" />
+          ) : null}
+          <div
+            className={cn(
+              "grid gap-4 sm:grid-cols-2",
+              isFetching && "pointer-events-none select-none opacity-[0.72]",
+            )}
+          >
           <Card className="border-2 border-foreground/15 bg-card shadow-md sm:col-span-2">
             <CardHeader>
               <CardTitle className="text-xl">{bnDate}</CardTitle>
@@ -132,6 +132,7 @@ export function ProfitModule() {
               </p>
             </CardContent>
           </Card>
+        </div>
         </div>
       )}
 

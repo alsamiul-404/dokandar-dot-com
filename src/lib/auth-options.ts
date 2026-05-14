@@ -18,40 +18,45 @@ export const authOptions: NextAuthOptions = {
         otp: { label: "OTP", type: "text" },
       },
       async authorize(raw) {
-        const parsed = otpLoginSchema.safeParse({
-          phone: raw?.phone,
-          otp: raw?.otp,
-        });
-        if (!parsed.success) {
+        try {
+          const parsed = otpLoginSchema.safeParse({
+            phone: raw?.phone,
+            otp: raw?.otp,
+          });
+          if (!parsed.success) {
+            return null;
+          }
+
+          const phone = normalizeBdPhone(parsed.data.phone);
+          if (!phone) {
+            return null;
+          }
+
+          if (!verifyOtp(phone, parsed.data.otp, { consume: true })) {
+            return null;
+          }
+
+          const user = await getPrisma().user.findUnique({
+            where: { phone },
+            include: { shop: true },
+          });
+
+          if (!user) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: `${user.phone}@phone.dokandar.local`,
+            name: user.name,
+            phone: user.phone,
+            shopId: user.shopId,
+            shopName: user.shop.name,
+          };
+        } catch (e) {
+          console.error("[next-auth] phone-otp authorize", e);
           return null;
         }
-
-        const phone = normalizeBdPhone(parsed.data.phone);
-        if (!phone) {
-          return null;
-        }
-
-        if (!verifyOtp(phone, parsed.data.otp, { consume: true })) {
-          return null;
-        }
-
-        const user = await getPrisma().user.findUnique({
-          where: { phone },
-          include: { shop: true },
-        });
-
-        if (!user) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: `${user.phone}@phone.dokandar.local`,
-          name: user.name,
-          phone: user.phone,
-          shopId: user.shopId,
-          shopName: user.shop.name,
-        };
       },
     }),
     CredentialsProvider({
@@ -62,46 +67,53 @@ export const authOptions: NextAuthOptions = {
         password: { label: "পাসওয়ার্ড", type: "password" },
       },
       async authorize(raw) {
-        const parsed = passwordLoginSchema.safeParse({
-          phone: raw?.phone,
-          password: raw?.password,
-        });
-        if (!parsed.success) {
+        try {
+          const parsed = passwordLoginSchema.safeParse({
+            phone: raw?.phone,
+            password: raw?.password,
+          });
+          if (!parsed.success) {
+            return null;
+          }
+
+          const phone = normalizeBdPhone(parsed.data.phone);
+          if (!phone) {
+            return null;
+          }
+
+          const user = await getPrisma().user.findUnique({
+            where: { phone },
+            include: { shop: true },
+          });
+
+          if (!user) {
+            return null;
+          }
+
+          const ok = await verifyPassword(parsed.data.password, user.passwordHash);
+          if (!ok) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: `${user.phone}@phone.dokandar.local`,
+            name: user.name,
+            phone: user.phone,
+            shopId: user.shopId,
+            shopName: user.shop.name,
+          };
+        } catch (e) {
+          console.error("[next-auth] phone-password authorize", e);
           return null;
         }
-
-        const phone = normalizeBdPhone(parsed.data.phone);
-        if (!phone) {
-          return null;
-        }
-
-        const user = await getPrisma().user.findUnique({
-          where: { phone },
-          include: { shop: true },
-        });
-
-        if (!user) {
-          return null;
-        }
-
-        const ok = await verifyPassword(parsed.data.password, user.passwordHash);
-        if (!ok) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: `${user.phone}@phone.dokandar.local`,
-          name: user.name,
-          phone: user.phone,
-          shopId: user.shopId,
-          shopName: user.shop.name,
-        };
       },
     }),
   ],
   pages: {
     signIn: "/auth",
+    /** Avoid bare /api/auth/error; send users back to /auth with ?error= */
+    error: "/auth",
   },
   callbacks: {
     async jwt({ token, user }) {

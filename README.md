@@ -80,7 +80,7 @@ For architecture, data model, and engineering decisions, see **[GUIDE.md](./GUID
    - `DATABASE_URL` — **PostgreSQL**; on Supabase use the **transaction pooler** (port **6543**, `pgbouncer=true`) — see `.env.example`
    - `DIRECT_DATABASE_URL` — for **Prisma migrate**: Supabase **direct** URI (host **`db.<project-ref>.supabase.co`**, user **`postgres`**, port **5432**) — not the pooler hostname. Copy both strings from **Supabase → Project Settings → Database**
    - `NEXTAUTH_SECRET` — long random string ([generate](https://generate-secret.vercel.app/32))
-   - `NEXTAUTH_URL` — production / `npm run start` target. For **`npm run dev`**, `scripts/dev.mjs` sets **`NEXTAUTH_URL=http://127.0.0.1:<port>`** to match the dev server (same host as Next’s **Local:** line).
+   - `NEXTAUTH_URL` — production / `npm run start` target. For **`npm run dev`**, `scripts/dev.mjs` sets **`NEXTAUTH_URL=http://127.0.0.1:<port>`** to match the dev server (same host as Next’s **Local:** line). If you run **`next dev` without that script**, set `NEXTAUTH_URL` yourself to the **exact** origin you open in the browser (`localhost` vs `127.0.0.1` must match, or login fails with **Configuration** / `/api/auth/error`).
    - **Do not set `PORT` in `.env` for local dev** — it can make Next retry other ports so logs no longer match. `npm run dev` passes **`next dev -p …`** (prefers **3000**, then **5000**, then fallbacks). Set **`PORT`** only when you run **`npm run start`**. On many Windows PCs, **2945–3044** are reserved (Hyper-V), so **3000** often cannot bind (`EACCES`).
    - Optional: `NEXT_PUBLIC_API_URL` — defaults to same-origin `/api`
    - For real OTP SMS: `SSL_WIRELESS_API_KEY`, `SSL_WIRELESS_SENDER_ID`, etc. (see `.env.example`)

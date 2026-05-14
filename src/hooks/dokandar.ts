@@ -332,6 +332,7 @@ export function useDailySalesReport(date?: string) {
       return data;
     },
     enabled,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -345,6 +346,7 @@ export function useProfitReport(date?: string) {
       return data;
     },
     enabled,
+    placeholderData: (previousData) => previousData,
   });
 }
 

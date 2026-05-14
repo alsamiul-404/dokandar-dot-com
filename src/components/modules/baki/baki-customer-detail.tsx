@@ -45,6 +45,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DetailPageGlassSkeleton } from "@/components/shared/module-loading-skeleton";
+import { InlineLoadingLabel } from "@/components/shared/loading-status";
 
 type Props = { customerId: string };
 
@@ -82,7 +84,7 @@ export function BakiCustomerDetail({ customerId }: Props) {
   }, [data, authSession?.user?.shopName]);
 
   if (status === "loading" || (isPending && !data)) {
-    return <p className="p-6 text-lg text-muted-foreground">লোড হচ্ছে…</p>;
+    return <DetailPageGlassSkeleton />;
   }
   if (isError || !data) {
     return <p className="p-6 text-lg text-destructive">গ্রাহক পাওয়া যায়নি</p>;
@@ -198,7 +200,11 @@ export function BakiCustomerDetail({ customerId }: Props) {
                   disabled={entryMut.isPending}
                   className="h-12 min-h-[48px] text-base"
                 >
-                  {entryMut.isPending ? "সংরক্ষণ…" : "সেভ করুন"}
+                  <InlineLoadingLabel
+                    loading={entryMut.isPending}
+                    idle="সেভ করুন"
+                    loadingLabel="সংরক্ষণ হচ্ছে…"
+                  />
                 </Button>
               </form>
             </Form>
@@ -254,7 +260,11 @@ export function BakiCustomerDetail({ customerId }: Props) {
                   disabled={entryMut.isPending}
                   className="h-12 min-h-[48px] text-base"
                 >
-                  {entryMut.isPending ? "সংরক্ষণ…" : "জমা সেভ"}
+                  <InlineLoadingLabel
+                    loading={entryMut.isPending}
+                    idle="জমা সেভ"
+                    loadingLabel="সংরক্ষণ হচ্ছে…"
+                  />
                 </Button>
               </form>
             </Form>

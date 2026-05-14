@@ -69,10 +69,47 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(14px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "float-soft": {
+          "0%, 100%": { transform: "translateY(0) scale(1)" },
+          "50%": { transform: "translateY(-8px) scale(1.02)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
+        "loading-enter": {
+          from: { opacity: "0", transform: "translateY(10px) scale(0.985)" },
+          to: { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        "loading-glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" },
+          "50%": {
+            boxShadow:
+              "0 6px 28px -10px hsl(var(--primary) / 0.16), 0 0 0 1px hsl(var(--primary) / 0.06)",
+          },
+        },
+        "loading-bar-sweep": {
+          "0%": { transform: "translateX(-120%)" },
+          "100%": { transform: "translateX(420%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-up": "fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        "float-soft": "float-soft 7s ease-in-out infinite",
+        shimmer: "shimmer 2.5s linear infinite",
+        "loading-enter": "loading-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        "loading-glow-pulse": "loading-glow-pulse 2.4s ease-in-out infinite",
+        "loading-bar-sweep": "loading-bar-sweep 1.65s ease-in-out infinite",
+      },
+      boxShadow: {
+        glow: "0 0 40px -10px hsl(var(--primary) / 0.35)",
+        "glow-sm": "0 0 24px -8px hsl(var(--primary) / 0.25)",
       },
     },
   },

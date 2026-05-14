@@ -35,6 +35,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ModulePageGlassSkeleton } from "@/components/shared/module-loading-skeleton";
+import { InlineLoadingLabel } from "@/components/shared/loading-status";
 
 export function StockModule() {
   const { status } = useSession();
@@ -55,7 +57,7 @@ export function StockModule() {
   });
 
   if (status === "loading" || (isPending && !data)) {
-    return <p className="p-6 text-muted-foreground">লোড হচ্ছে…</p>;
+    return <ModulePageGlassSkeleton sections={2} />;
   }
 
   return (
@@ -186,7 +188,11 @@ export function StockModule() {
               />
               <div className="sm:col-span-2">
                 <Button type="submit" disabled={createProduct.isPending}>
-                  {createProduct.isPending ? "সংরক্ষণ…" : "পণ্য যোগ করুন"}
+                  <InlineLoadingLabel
+                    loading={createProduct.isPending}
+                    idle="পণ্য যোগ করুন"
+                    loadingLabel="সংরক্ষণ হচ্ছে…"
+                  />
                 </Button>
               </div>
             </form>

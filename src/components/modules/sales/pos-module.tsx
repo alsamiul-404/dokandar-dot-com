@@ -32,6 +32,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PosModuleSkeleton } from "@/components/shared/module-loading-skeleton";
+import { InlineLoadingLabel } from "@/components/shared/loading-status";
 
 type Line = { productId: string; name: string; quantity: number; unitPrice: string };
 
@@ -59,7 +61,7 @@ export function PosModule() {
   }, [lines]);
 
   if (status === "loading" || (pLoad && !products)) {
-    return <p className="p-6 text-muted-foreground">লোড হচ্ছে…</p>;
+    return <PosModuleSkeleton />;
   }
 
   function addLine() {
@@ -267,7 +269,11 @@ export function PosModule() {
               disabled={checkout.isPending || !lines.length}
               onClick={() => void submit()}
             >
-              {checkout.isPending ? "সংরক্ষণ…" : "বিক্রয় নিশ্চিত করুন"}
+              <InlineLoadingLabel
+                loading={checkout.isPending}
+                idle="বিক্রয় নিশ্চিত করুন"
+                loadingLabel="সংরক্ষণ হচ্ছে…"
+              />
             </Button>
             {checkoutErr || checkout.isError ? (
               <p className="mt-2 text-sm text-destructive">

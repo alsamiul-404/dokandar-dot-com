@@ -34,6 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTableSkeleton } from "@/components/shared/module-loading-skeleton";
+import { InlineLoadingLabel, ReportLoadingBanner } from "@/components/shared/loading-status";
 
 export function BakiModule() {
   const { data, isLoading, isError } = useBakiCustomers();
@@ -106,7 +108,11 @@ export function BakiModule() {
                 className="h-12 min-w-[10rem]"
                 disabled={createCustomer.isPending}
               >
-                {createCustomer.isPending ? "সংরক্ষণ…" : "গ্রাহক যোগ করুন"}
+                <InlineLoadingLabel
+                  loading={createCustomer.isPending}
+                  idle="গ্রাহক যোগ করুন"
+                  loadingLabel="সংরক্ষণ হচ্ছে…"
+                />
               </Button>
             </form>
           </Form>
@@ -126,7 +132,13 @@ export function BakiModule() {
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
           {isLoading ? (
-            <p className="p-6 text-muted-foreground">লোড হচ্ছে…</p>
+            <div className="space-y-4 p-4 sm:p-6">
+              <ReportLoadingBanner
+                title="গ্রাহক তালিকা লোড হচ্ছে…"
+                hint="বাকি খাতার গ্রাহক ও মোট পাওনা আনা হচ্ছে"
+              />
+              <DataTableSkeleton rows={6} />
+            </div>
           ) : isError ? (
             <p className="p-6 text-destructive">ডাটা আনা যায়নি</p>
           ) : !data?.length ? (

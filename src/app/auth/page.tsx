@@ -10,15 +10,22 @@ export const metadata: Metadata = {
   description: "দোকানদার লগইন ও নিবন্ধন",
 };
 
-export default async function AuthPage() {
+export default async function AuthPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getServerSession(authOptions);
   if (session?.user) {
     redirect("/dashboard");
   }
 
+  const raw = searchParams.error;
+  const nextAuthError = typeof raw === "string" ? raw : undefined;
+
   return (
-    <main className="flex min-h-dvh flex-col bg-gradient-to-b from-muted/40 to-background">
-      <AuthForms />
+    <main className="bg-app-mesh relative flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-6">
+      <AuthForms nextAuthError={nextAuthError} />
     </main>
   );
 }

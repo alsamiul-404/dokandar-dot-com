@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 import { useDailySalesReport } from "@/hooks/dokandar";
 import { downloadDailySalesPdf } from "@/lib/pdf/daily-sales-pdf";
@@ -33,8 +33,22 @@ export function PdfDailySalesButton({ date, className }: Props) {
         void downloadDailySalesPdf(data).finally(() => setBusy(false));
       }}
     >
-      <Download className="h-5 w-5 shrink-0" aria-hidden />
-      {busy ? "পিডিএফ…" : "দৈনিক বিক্রয় পিডিএফ"}
+      {isLoading ? (
+        <>
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden />
+          রিপোর্ট লোড হচ্ছে…
+        </>
+      ) : busy ? (
+        <>
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden />
+          পিডিএফ তৈরি হচ্ছে…
+        </>
+      ) : (
+        <>
+          <Download className="h-5 w-5 shrink-0" aria-hidden />
+          দৈনিক বিক্রয় পিডিএফ
+        </>
+      )}
     </Button>
   );
 }

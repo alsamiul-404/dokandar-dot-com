@@ -5,19 +5,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex min-h-[48px] items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
+  "inline-flex min-h-[48px] items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-semibold ring-offset-background transition-[color,background-color,box-shadow,transform] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+        default:
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/92 hover:shadow-md",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/92 hover:shadow-md",
         outline:
-          "border-2 border-foreground/20 bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-2 border-foreground/20 bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm",
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/85 hover:shadow-md",
         ghost:
           "min-h-[44px] rounded-xl font-medium hover:bg-accent hover:text-accent-foreground",
-        link: "min-h-0 text-primary underline-offset-4 hover:underline",
+        link: "min-h-0 scale-100 text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {
         default: "h-12 px-5 py-2",

@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { BookMarked, Package, Receipt, TrendingUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+const MotionLink = motion(Link);
 
 const modules = [
   {
@@ -42,28 +47,62 @@ const modules = [
   },
 ] as const;
 
+const listVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
+};
+
+const tileVariants = {
+  hidden: { opacity: 0, y: 18 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 360, damping: 26 },
+  },
+};
+
 export function DashboardHomeTiles() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="space-y-1 px-0.5">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">মডিউল</h1>
+    <div className="flex flex-col gap-5">
+      <motion.div
+        className="space-y-1 px-0.5"
+        initial={{ opacity: 0, y: 8 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-24px" }}
+        transition={{ type: "spring", stiffness: 400, damping: 34 }}
+      >
+        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">মডিউল</h2>
         <p className="text-base text-muted-foreground">
           কাজ শুরু করতে নিচের একটি বাটনে চাপ দিন
         </p>
-      </div>
+      </motion.div>
 
-      <ul className="flex flex-col gap-4" role="list">
+      <motion.ul
+        className="flex flex-col gap-4"
+        role="list"
+        variants={listVariants}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-40px" }}
+      >
         {modules.map((m) => (
-          <li key={m.href}>
-            <Link
+          <motion.li key={m.href} variants={tileVariants}>
+            <MotionLink
               href={m.href}
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.985 }}
+              transition={{ type: "spring", stiffness: 420, damping: 28 }}
               className={cn(
-                "group flex min-h-[10rem] w-full flex-col justify-between rounded-3xl border-2 border-black/10 p-5 shadow-md transition-[transform,box-shadow] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-[11rem] sm:p-6",
+                "group relative flex min-h-[10rem] w-full flex-col justify-between overflow-hidden rounded-3xl border-2 border-black/10 p-5 shadow-md ring-1 ring-black/[0.03] transition-shadow duration-200 will-change-transform hover:shadow-lg hover:shadow-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:ring-white/[0.06] dark:hover:shadow-black/40 sm:min-h-[11rem] sm:p-6",
                 m.accent,
               )}
               aria-label={`${m.title} — ${m.subtitle}`}
             >
-              <div className="flex items-start justify-between gap-4">
+              <span
+                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-white/25 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100 dark:bg-white/15"
+                aria-hidden
+              />
+              <div className="relative flex items-start justify-between gap-4">
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-2xl font-bold leading-tight sm:text-3xl">
                     {m.title}
@@ -74,7 +113,7 @@ export function DashboardHomeTiles() {
                 </div>
                 <span
                   className={cn(
-                    "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16",
+                    "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105 sm:h-16 sm:w-16",
                     m.iconWrap,
                   )}
                   aria-hidden
@@ -82,13 +121,13 @@ export function DashboardHomeTiles() {
                   <m.icon className="h-8 w-8 sm:h-9 sm:w-9" strokeWidth={1.75} />
                 </span>
               </div>
-              <span className="mt-4 inline-flex min-h-[44px] items-center text-base font-bold underline-offset-4 group-hover:underline">
+              <span className="relative mt-4 inline-flex min-h-[44px] items-center text-base font-bold underline-offset-4 group-hover:underline">
                 খুলুন →
               </span>
-            </Link>
-          </li>
+            </MotionLink>
+          </motion.li>
         ))}
-      </ul>
+      </motion.ul>
     </div>
   );
 }

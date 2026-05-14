@@ -37,6 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DetailPageGlassSkeleton } from "@/components/shared/module-loading-skeleton";
+import { InlineLoadingLabel } from "@/components/shared/loading-status";
 
 type Props = { productId: string };
 
@@ -51,7 +53,7 @@ export function StockProductDetail({ productId }: Props) {
   });
 
   if (status === "loading" || (isPending && !data)) {
-    return <p className="p-6 text-muted-foreground">লোড হচ্ছে…</p>;
+    return <DetailPageGlassSkeleton />;
   }
   if (isError || !data) {
     return <p className="p-6 text-destructive">পণ্য নেই</p>;
@@ -170,7 +172,11 @@ export function StockProductDetail({ productId }: Props) {
                 )}
               />
               <Button type="submit" disabled={adjust.isPending}>
-                {adjust.isPending ? "সংরক্ষণ…" : "সমন্বয় সেভ"}
+                <InlineLoadingLabel
+                  loading={adjust.isPending}
+                  idle="সমন্বয় সেভ"
+                  loadingLabel="সংরক্ষণ হচ্ছে…"
+                />
               </Button>
             </form>
           </Form>

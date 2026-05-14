@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 import type { CustomerLedgerPdfInput } from "@/lib/reports/types";
 import { downloadCustomerLedgerPdf } from "@/lib/pdf/customer-ledger-pdf";
@@ -31,8 +31,17 @@ export function PdfCustomerLedgerButton({ input, className }: Props) {
         void downloadCustomerLedgerPdf(input).finally(() => setBusy(false));
       }}
     >
-      <Download className="h-5 w-5 shrink-0" aria-hidden />
-      {busy ? "পিডিএফ…" : "খাতার পিডিএফ"}
+      {busy ? (
+        <>
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden />
+          পিডিএফ তৈরি হচ্ছে…
+        </>
+      ) : (
+        <>
+          <Download className="h-5 w-5 shrink-0" aria-hidden />
+          খাতার পিডিএফ
+        </>
+      )}
     </Button>
   );
 }
