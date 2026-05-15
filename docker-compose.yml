@@ -1,0 +1,19 @@
+# OPTIONAL — local Docker only. Production uses Upstash + CloudAMQP (see .env.example).
+# Prefer cloud URLs in .env for dev+prod parity: npm run check:infra
+
+services:
+  redis:
+    image: redis:7-alpine
+    profiles: ["local"]
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    profiles: ["local"]
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: dokandar
+      RABBITMQ_DEFAULT_PASS: dokandar

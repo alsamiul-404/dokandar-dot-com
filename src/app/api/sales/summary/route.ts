@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
 import { endOfDay, parseISO, startOfDay } from "date-fns";
 import Decimal from "decimal.js";
 
+import { jsonResponse } from "@/lib/api/json-response";
 import { requireShopApi } from "@/lib/api/require-shop";
+import { getCached, setCached, shopCacheKeys, shopCacheTtl } from "@/lib/cache/shop-cache";
 import { getPrisma } from "@/lib/prisma";
 import { reportDateQuerySchema, zodFirstError } from "@/lib/validations/common";
 
@@ -15,39 +16,54 @@ export async function GET(req: Request) {
     date: url.searchParams.get("date") || undefined,
   });
   if (!dq.success) {
-    return NextResponse.json({ error: zodFirstError(dq.error) }, { status: 400 });
+    return jsonResponse({ error: zodFirstError(dq.error) }, { status: 400 });
   }
 
   const day = dq.data.date ? parseISO(dq.data.date) : new Date();
   const from = startOfDay(day);
   const to = endOfDay(day);
+  const dateStr = from.toISOString().slice(0, 10);
 
-  const sales = await getPrisma().sale.findMany({
-    where: {
-      shopId: auth.shopId,
-      soldAt: { gte: from, lte: to },
-    },
-    select: {
-      totalAmount: true,
-      cashPaid: true,
-      creditAmount: true,
-    },
-  });
-
-  let totalSales = new Decimal(0);
-  let cash = new Decimal(0);
-  let baki = new Decimal(0);
-  for (const s of sales) {
-    totalSales = totalSales.plus(s.totalAmount.toString());
-    cash = cash.plus(s.cashPaid.toString());
-    baki = baki.plus(s.creditAmount.toString());
+  const cacheKey = shopCacheKeys.salesSummary(auth.shopId, dateStr);
+  const cached = await getCached<unknown>(cacheKey);
+  if (cached) {
+    return jsonResponse(cached, { headers: { "X-Cache": "HIT" } });
   }
 
-  return NextResponse.json({
-    date: from.toISOString().slice(0, 10),
-    saleCount: sales.length,
+  const prisma = getPrisma();
+  const [agg, saleCount] = await Promise.all([
+    prisma.sale.aggregate({
+      where: {
+        shopId: auth.shopId,
+        soldAt: { gte: from, lte: to },
+      },
+      _sum: {
+        totalAmount: true,
+        cashPaid: true,
+        creditAmount: true,
+      },
+    }),
+    prisma.sale.count({
+      where: {
+        shopId: auth.shopId,
+        soldAt: { gte: from, lte: to },
+      },
+    }),
+  ]);
+
+  const totalSales = new Decimal(agg._sum.totalAmount?.toString() ?? "0");
+  const cash = new Decimal(agg._sum.cashPaid?.toString() ?? "0");
+  const baki = new Decimal(agg._sum.creditAmount?.toString() ?? "0");
+
+  const payload = {
+    date: dateStr,
+    saleCount,
     totalSales: totalSales.toFixed(2),
     cash: cash.toFixed(2),
     baki: baki.toFixed(2),
-  });
+  };
+
+  void setCached(cacheKey, payload, shopCacheTtl.salesSummary);
+
+  return jsonResponse(payload, { headers: { "X-Cache": "MISS" } });
 }

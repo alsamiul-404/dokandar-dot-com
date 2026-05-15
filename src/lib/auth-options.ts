@@ -32,7 +32,7 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          if (!verifyOtp(phone, parsed.data.otp, { consume: true })) {
+          if (!(await verifyOtp(phone, parsed.data.otp, { consume: true }))) {
             return null;
           }
 

@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "worker": "cross-env NODE_OPTIONS=--use-system-ca tsx workers/queue-worker.ts",
+    "check:infra": "cross-env NODE_OPTIONS=--use-system-ca tsx scripts/check-infra.ts",
+    "infra:local": "docker compose --profile local up -d",
+    "infra:local:down": "docker compose --profile local down",
     "build": "cross-env NODE_OPTIONS=--use-system-ca next build",
     "start": "cross-env NODE_OPTIONS=--use-system-ca next start -H 127.0.0.1",
     "lint": "next lint",
@@ -27,13 +31,17 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-query": "^5.76.1",
+    "@upstash/redis": "^1.38.0",
+    "amqplib": "^0.10.9",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "decimal.js": "^10.5.0",
+    "dotenv": "^16.5.0",
     "framer-motion": "^11.18.2",
+    "ioredis": "^5.10.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.511.0",
     "next": "14.2.35",
@@ -48,6 +56,7 @@
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.76.1",
+    "@types/amqplib": "^0.10.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
@@ -62,6 +71,7 @@
     "prettier": "^3.8.3",
     "prisma": "^6.8.2",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.22.0",
     "typescript": "^5"
   }
 }

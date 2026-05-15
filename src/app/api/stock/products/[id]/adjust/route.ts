@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
-
+import { jsonResponse } from "@/lib/api/json-response";
 import { requireShopApi } from "@/lib/api/require-shop";
 import { getPrisma } from "@/lib/prisma";
+import { dispatchCacheInvalidate } from "@/lib/queue/publish";
 import { adjustStockSchema } from "@/lib/validations/stock";
 import {
   invalidUuidResponse,
@@ -24,12 +24,12 @@ export async function POST(req: Request, { params }: Ctx) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "অবৈধ JSON" }, { status: 400 });
+    return jsonResponse({ error: "অবৈধ JSON" }, { status: 400 });
   }
 
   const parsed = adjustStockSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: zodFirstError(parsed.error) }, { status: 400 });
+    return jsonResponse({ error: zodFirstError(parsed.error) }, { status: 400 });
   }
 
   const { direction, quantity, note } = parsed.data;
@@ -60,16 +60,18 @@ export async function POST(req: Request, { params }: Ctx) {
     });
   } catch (e) {
     if (e instanceof Error && e.message === "INSUFFICIENT_STOCK") {
-      return NextResponse.json(
+      return jsonResponse(
         { error: "মজুদের চেয়ে বেশি বাদ দেওয়া যাবে না" },
         { status: 400 },
       );
     }
     if (e instanceof Error && e.message === "NOT_FOUND") {
-      return NextResponse.json({ error: "পণ্য নেই" }, { status: 404 });
+      return jsonResponse({ error: "পণ্য নেই" }, { status: 404 });
     }
-    return NextResponse.json({ error: "সমন্বয় ব্যর্থ" }, { status: 500 });
+    return jsonResponse({ error: "সমন্বয় ব্যর্থ" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  void dispatchCacheInvalidate(auth.shopId, "stock");
+
+  return jsonResponse({ ok: true });
 }

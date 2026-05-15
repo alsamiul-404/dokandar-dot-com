@@ -21,3 +21,19 @@ export function zodFirstError(error: z.ZodError): string {
 export function invalidUuidResponse(): NextResponse {
   return NextResponse.json({ error: "সঠিক আইডি নয়" }, { status: 400 });
 }
+
+const MAX_PAGE_LIMIT = 200;
+
+/** `?limit=` and `?cursor=` for paginated list endpoints */
+export const paginationQuerySchema = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PAGE_LIMIT)
+    .optional()
+    .default(50),
+  cursor: z.string().uuid("সঠিক কার্সর নয়").optional(),
+});
+
+export const MAX_LIST_LIMIT = MAX_PAGE_LIMIT;

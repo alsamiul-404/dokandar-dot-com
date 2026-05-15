@@ -4,7 +4,7 @@ const withPWA = require("next-pwa")({
   register: true,
   skipWaiting: true,
   scope: "/",
-  /** Offline-first: cache static UI, fonts, icons, Next chunks; API stays network-first */
+  /** Offline-first: cache static UI, fonts, icons, Next chunks only — never cache /api */
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.maateen\.me\/.*/i,
@@ -51,24 +51,6 @@ const withPWA = require("next-pwa")({
       },
     },
     {
-      urlPattern: /\/_next\/image\?url=.+$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
-        cacheName: "next-image",
-        expiration: { maxEntries: 64, maxAgeSeconds: 7 * 24 * 60 * 60 },
-      },
-    },
-    {
-      urlPattern: ({ url }) =>
-        url.origin === self.location.origin && url.pathname.startsWith("/api/"),
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "dokandar-api",
-        networkTimeoutSeconds: 8,
-        expiration: { maxEntries: 80, maxAgeSeconds: 24 * 60 * 60 },
-      },
-    },
-    {
       urlPattern: ({ request, url }) =>
         request.mode === "navigate" && url.origin === self.location.origin,
       handler: "NetworkFirst",
@@ -84,6 +66,21 @@ const withPWA = require("next-pwa")({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
+  compress: true,
+  headers: async () => [
+    {
+      source: "/api/:path*",
+      headers: [
+        { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+      ],
+    },
+    {
+      source: "/_next/static/:path*",
+      headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+    },
+  ],
 };
 
 module.exports = withPWA(nextConfig);

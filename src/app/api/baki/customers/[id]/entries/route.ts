@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
 import Decimal from "decimal.js";
 
+import { jsonResponse } from "@/lib/api/json-response";
 import { requireShopApi } from "@/lib/api/require-shop";
 import { getCustomerBalance } from "@/lib/baki/ledger";
 import { getPrisma } from "@/lib/prisma";
+import { dispatchCacheInvalidate } from "@/lib/queue/publish";
 import { bakiEntryPostSchema } from "@/lib/validations/baki";
 import {
   invalidUuidResponse,
@@ -26,12 +27,12 @@ export async function POST(req: Request, { params }: Ctx) {
   try {
     json = await req.json();
   } catch {
-    return NextResponse.json({ error: "অবৈধ JSON" }, { status: 400 });
+    return jsonResponse({ error: "অবৈধ JSON" }, { status: 400 });
   }
 
   const parsed = bakiEntryPostSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: zodFirstError(parsed.error) }, { status: 400 });
+    return jsonResponse({ error: zodFirstError(parsed.error) }, { status: 400 });
   }
 
   const customer = await getPrisma().customer.findFirst({
@@ -39,7 +40,7 @@ export async function POST(req: Request, { params }: Ctx) {
     select: { id: true },
   });
   if (!customer) {
-    return NextResponse.json({ error: "গ্রাহক নেই" }, { status: 404 });
+    return jsonResponse({ error: "গ্রাহক নেই" }, { status: 404 });
   }
 
   const { kind, amountTaka, note } = parsed.data;
@@ -47,7 +48,7 @@ export async function POST(req: Request, { params }: Ctx) {
 
   if (kind === "ADD_BAKI") {
     if (amount.lte(0)) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: "টাকার পরিমাণ শূন্যের বেশি হতে হবে" },
         { status: 400 },
       );
@@ -63,14 +64,14 @@ export async function POST(req: Request, { params }: Ctx) {
     });
   } else {
     if (amount.lte(0)) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: "জমার পরিমাণ শূন্যের বেশি হতে হবে" },
         { status: 400 },
       );
     }
     const balance = await getCustomerBalance(auth.shopId, customer.id);
     if (amount.gt(balance)) {
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: `মোট বাকি ${balance.toFixed(2)} টাকার বেশি জমা নেওয়া যাবে না`,
         },
@@ -88,5 +89,7 @@ export async function POST(req: Request, { params }: Ctx) {
     });
   }
 
-  return NextResponse.json({ ok: true });
+  void dispatchCacheInvalidate(auth.shopId, "baki");
+
+  return jsonResponse({ ok: true });
 }

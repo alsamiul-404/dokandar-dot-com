@@ -1,32 +1,49 @@
-import { NextResponse } from "next/server";
-
+import { jsonResponse } from "@/lib/api/json-response";
 import { getPrisma } from "@/lib/prisma";
-import { createAndStoreOtp } from "@/lib/otp";
+import { createAndStoreOtp, pruneExpiredOtps } from "@/lib/otp";
 import { normalizeBdPhone } from "@/lib/phone";
-import { sendOtpSms } from "@/lib/sms";
+import { dispatchOtpSms } from "@/lib/queue/publish";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { requestOtpBodySchema } from "@/lib/validations/auth";
 import { zodFirstError } from "@/lib/validations/common";
+
+const OTP_PHONE_LIMIT = 5;
+const OTP_PHONE_WINDOW_MS = 15 * 60 * 1000;
+const OTP_IP_LIMIT = 30;
+const OTP_IP_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(req: Request) {
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "অবৈধ JSON" }, { status: 400 });
+    return jsonResponse({ error: "অবৈধ JSON" }, { status: 400 });
   }
 
   const parsed = requestOtpBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: zodFirstError(parsed.error) }, { status: 400 });
+    return jsonResponse({ error: zodFirstError(parsed.error) }, { status: 400 });
   }
 
   const phone = normalizeBdPhone(parsed.data.phone);
   if (!phone) {
-    return NextResponse.json(
+    return jsonResponse(
       { error: "সঠিক বাংলাদেশি মোবাইল নম্বর দিন" },
       { status: 400 },
     );
   }
+
+  const ip = getClientIp(req);
+  const [phoneRl, ipRl] = await Promise.all([
+    checkRateLimit(`otp:phone:${phone}`, {
+      limit: OTP_PHONE_LIMIT,
+      windowMs: OTP_PHONE_WINDOW_MS,
+    }),
+    checkRateLimit(`otp:ip:${ip}`, { limit: OTP_IP_LIMIT, windowMs: OTP_IP_WINDOW_MS }),
+  ]);
+
+  if (!phoneRl.ok) return rateLimitResponse(phoneRl.retryAfterSec);
+  if (!ipRl.ok) return rateLimitResponse(ipRl.retryAfterSec);
 
   const prisma = getPrisma();
   const existing = await prisma.user.findUnique({
@@ -35,39 +52,38 @@ export async function POST(req: Request) {
   });
 
   if (parsed.data.intent === "login" && !existing) {
-    return NextResponse.json({ error: "এই নম্বরে কোনো অ্যাকাউন্ট নেই" }, { status: 404 });
+    return jsonResponse({ error: "এই নম্বরে কোনো অ্যাকাউন্ট নেই" }, { status: 404 });
   }
   if (parsed.data.intent === "signup" && existing) {
-    return NextResponse.json(
+    return jsonResponse(
       { error: "এই নম্বরে ইতিমধ্যে অ্যাকাউন্ট আছে" },
       { status: 409 },
     );
   }
 
-  const code = createAndStoreOtp(phone);
+  void pruneExpiredOtps();
+  const code = await createAndStoreOtp(phone);
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
     console.info(
-      `[auth/otp] ${phone} stored OTP=${code} (mock ${process.env.AUTH_MOCK_OTP_CODE ?? "123456"} valid when allowed)`,
+      `[auth/otp] ${phone} OTP=${code} (mock ${process.env.AUTH_MOCK_OTP_CODE ?? "123456"} when allowed)`,
     );
   }
 
-  const sms = await sendOtpSms(phone, code);
-  const smsSkipped =
-    process.env.SMS_DISABLE_SEND === "true" ||
-    (process.env.NODE_ENV !== "production" && !process.env.SSL_WIRELESS_API_KEY?.trim());
+  const sms = await dispatchOtpSms(phone, code);
 
-  if (!sms.ok && !smsSkipped) {
-    return NextResponse.json(
+  if (!sms.skipped && !sms.sent) {
+    return jsonResponse(
       { error: sms.error ?? "এসএমএস পাঠানো যায়নি" },
       { status: 502 },
     );
   }
 
-  return NextResponse.json({
+  return jsonResponse({
     ok: true,
-    smsSent: sms.ok,
-    smsSkipped: smsSkipped || !sms.ok,
+    smsSent: sms.sent,
+    smsQueued: sms.queued,
+    smsSkipped: sms.skipped,
   });
 }

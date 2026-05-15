@@ -1,17 +1,25 @@
-import { NextResponse } from "next/server";
-
+import { jsonResponse } from "@/lib/api/json-response";
 import { requireShopApi } from "@/lib/api/require-shop";
+import { getCached, setCached, shopCacheKeys, shopCacheTtl } from "@/lib/cache/shop-cache";
 import { getPrisma } from "@/lib/prisma";
+import { dispatchCacheInvalidate } from "@/lib/queue/publish";
 import { newProductSchema } from "@/lib/validations/stock";
-import { zodFirstError } from "@/lib/validations/common";
+import { MAX_LIST_LIMIT, zodFirstError } from "@/lib/validations/common";
 
 export async function GET() {
   const auth = await requireShopApi();
   if (!auth.ok) return auth.response;
 
+  const cacheKey = shopCacheKeys.stockProducts(auth.shopId);
+  const cached = await getCached<unknown[]>(cacheKey);
+  if (cached) {
+    return jsonResponse(cached, { headers: { "X-Cache": "HIT" } });
+  }
+
   const rows = await getPrisma().product.findMany({
     where: { shopId: auth.shopId, isActive: true },
     orderBy: { name: "asc" },
+    take: MAX_LIST_LIMIT,
     select: {
       id: true,
       name: true,
@@ -25,25 +33,15 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(
-    rows.map(
-      (p: {
-        id: string;
-        name: string;
-        sku: string | null;
-        category: string;
-        buyPrice: { toString(): string };
-        unitPrice: { toString(): string };
-        stockOnHand: number;
-        lowStockAlert: number;
-        unit: string;
-      }) => ({
-        ...p,
-        buyPrice: p.buyPrice.toString(),
-        unitPrice: p.unitPrice.toString(),
-      }),
-    ),
-  );
+  const payload = rows.map((p) => ({
+    ...p,
+    buyPrice: p.buyPrice.toString(),
+    unitPrice: p.unitPrice.toString(),
+  }));
+
+  void setCached(cacheKey, payload, shopCacheTtl.stockProducts);
+
+  return jsonResponse(payload, { headers: { "X-Cache": "MISS" } });
 }
 
 export async function POST(req: Request) {
@@ -54,12 +52,12 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "অবৈধ JSON" }, { status: 400 });
+    return jsonResponse({ error: "অবৈধ JSON" }, { status: 400 });
   }
 
   const parsed = newProductSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: zodFirstError(parsed.error) }, { status: 400 });
+    return jsonResponse({ error: zodFirstError(parsed.error) }, { status: 400 });
   }
 
   const d = parsed.data;
@@ -92,7 +90,9 @@ export async function POST(req: Request) {
     return p;
   });
 
-  return NextResponse.json(
+  void dispatchCacheInvalidate(auth.shopId, "stock");
+
+  return jsonResponse(
     {
       id: product.id,
       name: product.name,

@@ -1,53 +1,61 @@
-import { randomInt } from "node:crypto";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 
+import { getPrisma } from "@/lib/prisma";
 import { normalizeBdPhone } from "@/lib/phone";
+import { consumeOtpRedis, storeOtpRedis, verifyOtpRedis } from "@/lib/redis/otp-redis";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MOCK_OTP = "123456";
 
-type OtpRecord = { code: string; expiresAt: number };
-
-const globalForOtp = globalThis as unknown as {
-  __dokandarOtpStore?: Map<string, OtpRecord>;
-};
-
-function getStore(): Map<string, OtpRecord> {
-  if (!globalForOtp.__dokandarOtpStore) {
-    globalForOtp.__dokandarOtpStore = new Map();
-  }
-  return globalForOtp.__dokandarOtpStore;
+function hashOtpCode(code: string): string {
+  const secret = process.env.NEXTAUTH_SECRET ?? "dokandar-dev-otp";
+  return createHash("sha256").update(`${secret}:${code}`).digest("hex");
 }
 
-function pruneExpired(store: Map<string, OtpRecord>) {
-  const now = Date.now();
-  for (const k of Array.from(store.keys())) {
-    const v = store.get(k);
-    if (v && v.expiresAt <= now) store.delete(k);
+function codesMatch(storedHash: string, code: string): boolean {
+  const computed = hashOtpCode(code);
+  try {
+    return timingSafeEqual(Buffer.from(storedHash, "hex"), Buffer.from(computed, "hex"));
+  } catch {
+    return false;
   }
 }
 
 /**
- * Generate a 6-digit OTP and store it for `phone` (must already be normalized).
+ * Generate a 6-digit OTP — Redis (fast) + Postgres (durable fallback).
  */
-export function createAndStoreOtp(normalizedPhone: string): string {
-  const store = getStore();
-  pruneExpired(store);
+export async function createAndStoreOtp(normalizedPhone: string): Promise<string> {
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  store.set(normalizedPhone, { code, expiresAt: Date.now() + OTP_TTL_MS });
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  const prisma = getPrisma();
+  await Promise.all([
+    storeOtpRedis(normalizedPhone, code),
+    prisma.$transaction([
+      prisma.otpChallenge.deleteMany({
+        where: { phone: normalizedPhone, consumedAt: null },
+      }),
+      prisma.otpChallenge.create({
+        data: {
+          phone: normalizedPhone,
+          codeHash: hashOtpCode(code),
+          expiresAt,
+        },
+      }),
+    ]),
+  ]);
+
   return code;
 }
 
 /**
- * Returns true when `otp` is valid for `phone` (any raw form accepted; normalized internally).
- * - In non-production, or when `AUTH_ALLOW_MOCK_OTP=true`, the fixed mock code matches.
- * - Otherwise only a non-expired stored OTP matches. When `consume` is true (default), a
- *   successful stored OTP is removed so it cannot be reused.
+ * Verify OTP — Redis first, then Postgres. Mock code in dev when allowed.
  */
-export function verifyOtp(
+export async function verifyOtp(
   phone: string,
   otp: string,
   opts?: { consume?: boolean },
-): boolean {
+): Promise<boolean> {
   const consume = opts?.consume !== false;
   const normalized = normalizeBdPhone(phone);
   if (!normalized) return false;
@@ -60,16 +68,75 @@ export function verifyOtp(
     return true;
   }
 
-  const store = getStore();
-  const rec = store.get(normalized);
-  if (!rec || rec.expiresAt <= Date.now()) {
+  const redisResult = await verifyOtpRedis(normalized, trimmed, consume);
+  if (redisResult === true) {
+    if (consume) {
+      await markOtpConsumedDb(normalized);
+    }
+    return true;
+  }
+  if (redisResult === false) {
     return false;
   }
-  if (rec.code !== trimmed) {
+
+  return verifyOtpDb(normalized, trimmed, consume);
+}
+
+async function markOtpConsumedDb(normalizedPhone: string): Promise<void> {
+  const prisma = getPrisma();
+  const challenge = await prisma.otpChallenge.findFirst({
+    where: {
+      phone: normalizedPhone,
+      consumedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (challenge) {
+    await prisma.otpChallenge.update({
+      where: { id: challenge.id },
+      data: { consumedAt: new Date() },
+    });
+  }
+}
+
+async function verifyOtpDb(
+  normalized: string,
+  trimmed: string,
+  consume: boolean,
+): Promise<boolean> {
+  const prisma = getPrisma();
+  const challenge = await prisma.otpChallenge.findFirst({
+    where: {
+      phone: normalized,
+      consumedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, codeHash: true },
+  });
+
+  if (!challenge || !codesMatch(challenge.codeHash, trimmed)) {
     return false;
   }
+
   if (consume) {
-    store.delete(normalized);
+    await Promise.all([
+      prisma.otpChallenge.update({
+        where: { id: challenge.id },
+        data: { consumedAt: new Date() },
+      }),
+      consumeOtpRedis(normalized),
+    ]);
   }
+
   return true;
+}
+
+/** Remove expired OTP rows (Postgres cleanup). */
+export async function pruneExpiredOtps(): Promise<void> {
+  await getPrisma().otpChallenge.deleteMany({
+    where: { expiresAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+  });
 }
