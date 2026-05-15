@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -26,7 +27,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { AutocompleteInput } from "@/components/shared/autocomplete-input";
 import { Input } from "@/components/ui/input";
+import { mergeCategorySuggestions } from "@/lib/form-suggestions";
 import {
   Table,
   TableBody,
@@ -55,6 +58,11 @@ export function StockModule() {
       initialQty: 0,
     },
   });
+
+  const shopCategories = useMemo(
+    () => (data ?? []).map((p) => p.category).filter(Boolean),
+    [data],
+  );
 
   if (status === "loading" || (isPending && !data)) {
     return <ModulePageGlassSkeleton sections={2} />;
@@ -115,7 +123,13 @@ export function StockModule() {
                   <FormItem>
                     <FormLabel>ক্যাটাগরি</FormLabel>
                     <FormControl>
-                      <Input placeholder="যেমন: মুদি" {...field} />
+                      <AutocompleteInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        suggestions={mergeCategorySuggestions(shopCategories, field.value)}
+                        placeholder="লিখুন — মুদি, তেল-মসলা…"
+                        emptyHint="ক্যাটাগরি লিখুন — পরামর্শ আসবে"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

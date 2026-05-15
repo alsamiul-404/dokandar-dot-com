@@ -28,6 +28,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -132,15 +139,17 @@ export function StockProductDetail({ productId }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>ধরন</FormLabel>
-                    <FormControl>
-                      <select
-                        className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-base"
-                        {...field}
-                      >
-                        <option value="add">যোগ</option>
-                        <option value="remove">বাদ</option>
-                      </select>
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue placeholder="ধরন বাছাই করুন" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="add">মজুদ যোগ</SelectItem>
+                        <SelectItem value="remove">মজুদ বাদ</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

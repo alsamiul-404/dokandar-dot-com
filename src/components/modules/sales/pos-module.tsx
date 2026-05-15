@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Combobox } from "@/components/shared/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -59,6 +60,29 @@ export function PosModule() {
     }
     return t;
   }, [lines]);
+
+  const productOptions = useMemo(
+    () =>
+      (products ?? []).map((p) => ({
+        value: p.id,
+        label: p.name,
+        hint: `মজুদ ${p.stockOnHand}${p.category ? ` · ${p.category}` : ""}`,
+        disabled: p.stockOnHand < 1,
+      })),
+    [products],
+  );
+
+  const customerOptions = useMemo(
+    () => [
+      { value: "", label: "নগদ-only / হাটে গ্রাহক" },
+      ...(customers ?? []).map((c) => ({
+        value: c.id,
+        label: c.name,
+        hint: c.phone ?? undefined,
+      })),
+    ],
+    [customers],
+  );
 
   if (status === "loading" || (pLoad && !products)) {
     return <PosModuleSkeleton />;
@@ -140,19 +164,15 @@ export function PosModule() {
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <div className="min-w-[10rem] flex-1 space-y-2">
             <Label htmlFor="pos-p">পণ্য</Label>
-            <select
+            <Combobox
               id="pos-p"
-              className="flex h-14 min-h-[56px] w-full rounded-xl border-2 border-input bg-background px-3 text-lg font-medium"
+              options={productOptions}
               value={pickProduct}
-              onChange={(e) => setPickProduct(e.target.value)}
-            >
-              <option value="">বাছাই করুন</option>
-              {products?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} (মজুদ {p.stockOnHand})
-                </option>
-              ))}
-            </select>
+              onChange={setPickProduct}
+              placeholder="পণ্য খুঁজুন…"
+              searchPlaceholder="নাম লিখে খুঁজুন…"
+              emptyText="পণ্য পাওয়া যায়নি"
+            />
           </div>
           <div className="w-28 space-y-2">
             <Label htmlFor="pos-q">পরিমাণ</Label>
@@ -225,18 +245,14 @@ export function PosModule() {
           <div className="grid gap-3 border-t px-4 py-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>গ্রাহক (বাকির জন্য)</Label>
-              <select
-                className="flex h-14 min-h-[56px] w-full rounded-xl border-2 border-input bg-background px-3 text-lg font-medium"
+              <Combobox
+                options={customerOptions}
                 value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-              >
-                <option value="">নগদ-only / হাটে গ্রাহক</option>
-                {customers?.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCustomerId}
+                placeholder="গ্রাহক খুঁজুন…"
+                searchPlaceholder="নাম বা নম্বর…"
+                emptyText="গ্রাহক নেই — বাকি পেজে যোগ করুন"
+              />
             </div>
             <div className="space-y-2">
               <Label>নোট</Label>
